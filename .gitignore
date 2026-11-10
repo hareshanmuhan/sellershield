@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+data/
+.env*
+!.env.example
+
+# local sandbox test logins
+sandbox-buyer.local.txt

@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛡️ SellerShield
 
-## Getting Started
+**AI that keeps small sellers' PayPal money safe and flowing.**
 
-First, run the development server:
+Small online sellers get their PayPal money held or their accounts limited, often because of small mistakes: no tracking on an order, a creeping dispute rate, or a dispute answered too late. SellerShield watches the account and fixes these through the PayPal APIs before they turn into lost money.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## What it does
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Feature | AI part (Gemini) | PayPal part |
+|---|---|---|
+| **Account health + 1.5% cliff forecast** | — (exact math in code) | Disputes API, captured orders |
+| **Tracking autopilot** | Reads a messy shipping email or label photo, extracts carrier + tracking number, matches the order | Orders v2 `POST /v2/checkout/orders/{id}/track` |
+| **Stop a dispute before it starts** | Reads the buyer's message, rates dispute risk, suggests the cheapest fair fix, writes a reply | Payments v2 refund (only after seller approves) |
+| **Dispute responder** | Recommends fight vs accept with money math, writes the evidence note | Disputes v1 `get`, `provide-evidence`, `accept-claim` |
+| **Ask about my account** | Answers in plain language using the seller's real data | Orders + Disputes data |
+| **Live events** | — | Webhooks (`CUSTOMER.DISPUTE.CREATED`, etc.) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Design rule:** the AI only proposes. Money moves only when the seller clicks approve, and amounts are checked in code (a refund can never exceed the order total).
 
-## Learn More
+## Run it locally
 
-To learn more about Next.js, take a look at the following resources:
+1. Node 20+ required.
+2. `npm install`
+3. Copy `.env.example` to `.env.local` and fill in:
+   - `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID` from your sandbox app at developer.paypal.com
+   - `GEMINI_API_KEY` from https://aistudio.google.com/apikey
+4. `npm run dev` and open http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Try the full flow (sandbox)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Demo store** → buy an item, logging in with your sandbox **Personal** account. A real sandbox order is created and captured.
+2. **Dashboard** → the order shows "Tracking: Missing" and counts toward "money waiting".
+3. Paste a shipping email like `Your UPS package 1Z999AA10123456784 for the leather wallet has shipped` → **Read with AI** → **Send tracking to PayPal**.
+4. Pick an order, paste a buyer complaint → **Check risk with AI** → **Approve refund**.
+5. Open a dispute: log into https://www.sandbox.paypal.com as the buyer, open the transaction and report a problem. It appears under **Disputes** → **Draft response** → **Submit evidence**.
+6. (Optional) Add a webhook in the dashboard pointing to `https://<your-host>/api/webhooks/paypal` and set `PAYPAL_WEBHOOK_ID`.
 
-## Deploy on Vercel
+## What is simulated (and why)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Held funds:** the sandbox cannot create holds or account limitations, so the "money waiting" panel is labelled as simulated.
+- **Sales history:** a new sandbox account has almost no sales, so the health score adds a labelled baseline (`DEMO_BASELINE_SALES=120`, `DEMO_BASELINE_DISPUTES=1`). Set both to `0` to use only live data.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Everything else calls the real PayPal sandbox APIs.
+
+## Tech
+
+Next.js 15 (App Router), TypeScript, Tailwind, PayPal REST APIs + JS SDK, Google Gemini (`gemini-2.5-flash`). Orders the app has seen are stored in `data/db.json`.
+
+## License
+
+MIT

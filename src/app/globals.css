@@ -1,26 +1,142 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
+/*
+  SellerShield palette: "evergreen ledger".
+  Sage paper canvas, deep pine ink, shield green for safe actions,
+  marigold (parcel tape) for things to do, coral for real danger.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #edf2ee;
+  --pine: #17302a;
+  --shield: #1d6b50;
+  --shield-soft: #dcebe2;
+  --marigold: #f0b429;
+  --marigold-soft: #fdf0cc;
+  --marigold-ink: #6e4b00;
+  --coral: #c8442f;
+  --coral-soft: #f8e0da;
+
+  --background: var(--canvas);
+  --foreground: var(--pine);
+  --card: #ffffff;
+  --card-foreground: var(--pine);
+  --popover: #ffffff;
+  --popover-foreground: var(--pine);
+  --primary: var(--shield);
+  --primary-foreground: #ffffff;
+  --secondary: var(--shield-soft);
+  --secondary-foreground: var(--pine);
+  --muted: #e3eae5;
+  --muted-foreground: #52665c;
+  --accent: var(--shield-soft);
+  --accent-foreground: var(--pine);
+  --destructive: var(--coral);
+  --border: #d3ddd6;
+  --input: #c3d0c7;
+  --ring: var(--shield);
+  --radius: 0.75rem;
+
+  --chart-1: var(--shield);
+  --chart-2: var(--marigold);
+  --chart-3: var(--coral);
+  --chart-4: #7c9a8b;
+  --chart-5: var(--pine);
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--pine);
+  --sidebar-primary: var(--shield);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--shield-soft);
+  --sidebar-accent-foreground: var(--pine);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--shield);
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-display);
+
+  --color-pine: var(--pine);
+  --color-shield: var(--shield);
+  --color-shield-soft: var(--shield-soft);
+  --color-marigold: var(--marigold);
+  --color-marigold-soft: var(--marigold-soft);
+  --color-marigold-ink: var(--marigold-ink);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    line-height: 1.55;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* A strip of "parcel tape" marks the things a seller should act on. */
+.tape {
+  background-image: repeating-linear-gradient(-45deg, var(--marigold) 0 10px, #f5c654 10px 20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,103 +1,119 @@
-import Image from "next/image";
+"use client";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api, type Health, type Order, type TabKey } from "@/components/dashboard/shared";
+import { HealthHero } from "@/components/dashboard/health-hero";
+import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
+import { TodayTodo, buildTodos } from "@/components/dashboard/today-todo";
+import { BuyersPanel, DisputesPanel, OrdersPanel, ShippingPanel, UpdatesPanel } from "@/components/dashboard/panels";
+import { ChatSheet } from "@/components/dashboard/chat-sheet";
 
-export default function Home() {
+const tabs: { key: TabKey; label: string }[] = [
+  { key: "orders", label: "Orders" },
+  { key: "shipping", label: "Add tracking" },
+  { key: "buyers", label: "Unhappy buyers" },
+  { key: "disputes", label: "Disputes" },
+  { key: "updates", label: "PayPal news" },
+];
+
+export default function Dashboard() {
+  const [health, setHealth] = useState<Health | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [tab, setTab] = useState<TabKey>("orders");
+  const [focus, setFocus] = useState("");
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [h, o, e] = await Promise.all([api<Health>("/api/health"), api<Order[]>("/api/orders"), api("/api/webhooks/paypal")]);
+      setHealth(h);
+      setOrders(o);
+      setEvents(e);
+      api("/api/disputes").then(setDisputes).catch(() => setDisputes([]));
+    } catch (e: any) {
+      toast.error("Couldn't load your account", { description: e.message });
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const held = orders.filter((o) => !o.tracking && !o.refunded);
+  const heldTotal = held.reduce((s, o) => s + Number(o.amount || 0), 0);
+  const todos = useMemo(() => buildTodos(orders, disputes), [orders, disputes]);
+
+  const go = useCallback((t: TabKey, orderId?: string) => {
+    setTab(t);
+    if (orderId) setFocus(orderId);
+    tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const counts: Partial<Record<TabKey, number>> = {
+    shipping: held.length,
+    buyers: orders.filter((o) => o.risk && o.risk.level !== "low" && !o.refunded).length,
+    disputes: disputes.filter((d) => d.status === "WAITING_FOR_SELLER_RESPONSE").length,
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <>
+      <WelcomeBanner />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <div className="grid xl:grid-cols-[1.4fr_1fr] gap-8 items-start">
+        <HealthHero health={health} heldTotal={heldTotal} heldCount={held.length} />
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.4 }}>
+          <TodayTodo todos={todos} loading={!health} atRisk={health?.status === "danger"} onGo={go} />
+        </motion.div>
+      </div>
+
+      <div ref={tabsRef} className="mt-12 scroll-mt-20">
+        {/* min-w-0: the Tabs root is a flex container, so without it the tab bar widens the whole page on phones. */}
+        <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="min-w-0">
+          <div className="relative min-w-0 max-w-full overflow-x-auto -mx-4 px-4 pb-1">
+            <TabsList className="h-auto bg-card border p-1 rounded-full">
+              {tabs.map((t) => (
+                <TabsTrigger
+                  key={t.key}
+                  value={t.key}
+                  className="rounded-full px-4 py-2 text-[15px] font-bold data-[state=active]:bg-pine data-[state=active]:text-white data-[state=active]:shadow-none"
+                >
+                  {t.label}
+                  {!!counts[t.key] && (
+                    <span className="ml-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-marigold px-1.5 text-xs text-pine">
+                      {counts[t.key]}
+                    </span>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </Tabs>
+
+        <div className="mt-4 rounded-2xl border bg-card p-5 sm:p-7 min-h-64">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tab}
+              role="tabpanel"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+            >
+              {tab === "orders" && <OrdersPanel orders={orders} onGo={go} />}
+              {tab === "shipping" && <ShippingPanel orders={orders} focus={focus} onDone={refresh} />}
+              {tab === "buyers" && <BuyersPanel orders={orders} focus={focus} onDone={refresh} />}
+              {tab === "disputes" && <DisputesPanel disputes={disputes} onDone={refresh} />}
+              {tab === "updates" && <UpdatesPanel events={events} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+
+      <ChatSheet health={health} orders={orders} onChanged={refresh} onGo={go} />
+    </>
   );
 }
