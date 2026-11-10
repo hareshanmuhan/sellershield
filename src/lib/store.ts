@@ -20,6 +20,8 @@ export type Order = {
   shipTo?: Address & { name?: string };
   payer?: { name?: string; email?: string; countryCode?: string; address?: Address };
   scam?: ScamResult;
+  /** Messages the seller pasted into Scam Radar. */
+  scamNotes?: string;
   proof?: ProofPhoto[];
 };
 

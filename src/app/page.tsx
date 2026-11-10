@@ -9,9 +9,11 @@ import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { TodayTodo, buildTodos } from "@/components/dashboard/today-todo";
 import { BuyersPanel, DisputesPanel, OrdersPanel, ShippingPanel, UpdatesPanel } from "@/components/dashboard/panels";
 import { ChatSheet } from "@/components/dashboard/chat-sheet";
+import { ScamPanel } from "@/components/dashboard/scam-panel";
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "orders", label: "Orders" },
+  { key: "scam", label: "Scam Radar" },
   { key: "shipping", label: "Add tracking" },
   { key: "buyers", label: "Unhappy buyers" },
   { key: "disputes", label: "Disputes" },
@@ -45,6 +47,22 @@ export default function Dashboard() {
     refresh();
   }, [refresh]);
 
+  // Scam Radar checks every new order before it ships, one at a time, in the background.
+  const scanning = useRef(new Set<string>());
+  useEffect(() => {
+    const todo = orders.filter((o) => !o.scam && !o.tracking && !o.refunded && !scanning.current.has(o.orderId));
+    if (!todo.length) return;
+    (async () => {
+      for (const o of todo) {
+        scanning.current.add(o.orderId);
+        try {
+          await api("/api/scam", { orderId: o.orderId });
+        } catch {}
+      }
+      refresh();
+    })();
+  }, [orders, refresh]);
+
   const held = orders.filter((o) => !o.tracking && !o.refunded);
   const heldTotal = held.reduce((s, o) => s + Number(o.amount || 0), 0);
   const todos = useMemo(() => buildTodos(orders, disputes, earnings), [orders, disputes, earnings]);
@@ -56,6 +74,7 @@ export default function Dashboard() {
   }, []);
 
   const counts: Partial<Record<TabKey, number>> = {
+    scam: held.filter((o) => o.scam && o.scam.verdict !== "safe").length,
     shipping: held.length,
     buyers: orders.filter((o) => o.risk && o.risk.level !== "low" && !o.refunded).length,
     disputes: disputes.filter((d) => d.status === "WAITING_FOR_SELLER_RESPONSE").length,
@@ -106,6 +125,7 @@ export default function Dashboard() {
               transition={{ duration: 0.2 }}
             >
               {tab === "orders" && <OrdersPanel orders={orders} earnings={earnings} onGo={go} />}
+              {tab === "scam" && <ScamPanel orders={orders} onDone={refresh} />}
               {tab === "shipping" && <ShippingPanel orders={orders} focus={focus} onDone={refresh} />}
               {tab === "buyers" && <BuyersPanel orders={orders} focus={focus} onDone={refresh} />}
               {tab === "disputes" && <DisputesPanel disputes={disputes} onDone={refresh} />}

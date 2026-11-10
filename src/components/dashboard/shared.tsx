@@ -13,6 +13,10 @@ export type Order = {
   refunded?: { amount: string };
   buyerMessage?: string;
   risk?: { level: "low" | "medium" | "high"; reason: string };
+  shipTo?: { name?: string; line1?: string; line2?: string; city?: string; state?: string; postalCode?: string; countryCode?: string };
+  payer?: { name?: string; email?: string; countryCode?: string };
+  scam?: { verdict: "safe" | "check" | "stop"; headline: string; reasons: string[]; whatToDo: string; flags: string[]; checkedAt: string };
+  proof?: { file: string; at: string; mimeType: string; good: boolean; feedback: string }[];
 };
 
 export type Health = {
@@ -61,7 +65,7 @@ export function expectedLabel(e?: Earnings) {
   return { date: shortDate(e.expected.by), when, kind: e.expected.kind, rule: e.expected.rule };
 }
 
-export type TabKey = "orders" | "shipping" | "buyers" | "disputes" | "updates";
+export type TabKey = "orders" | "scam" | "shipping" | "buyers" | "disputes" | "updates";
 
 export async function api<T = any>(url: string, body?: unknown): Promise<T> {
   const r = await fetch(

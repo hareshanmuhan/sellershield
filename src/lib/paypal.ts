@@ -46,12 +46,30 @@ export async function pp<T = any>(path: string, init: RequestInit = {}): Promise
 }
 
 // ---------- Orders ----------
-export function createOrder(amount: string, description: string) {
+export type ShipTo = { name: string; line1: string; line2?: string; city: string; state: string; postalCode: string; countryCode: string };
+
+/** `shipTo` forces a shipping address (used by the demo store to test Scam Radar). */
+export function createOrder(amount: string, description: string, shipTo?: ShipTo) {
+  const unit: Record<string, unknown> = { amount: { currency_code: "USD", value: amount }, description };
+  if (shipTo) {
+    unit.shipping = {
+      name: { full_name: shipTo.name },
+      address: {
+        address_line_1: shipTo.line1,
+        address_line_2: shipTo.line2,
+        admin_area_2: shipTo.city,
+        admin_area_1: shipTo.state,
+        postal_code: shipTo.postalCode,
+        country_code: shipTo.countryCode,
+      },
+    };
+  }
   return pp("/v2/checkout/orders", {
     method: "POST",
     body: JSON.stringify({
       intent: "CAPTURE",
-      purchase_units: [{ amount: { currency_code: "USD", value: amount }, description }],
+      purchase_units: [unit],
+      ...(shipTo ? { payment_source: { paypal: { experience_context: { shipping_preference: "SET_PROVIDED_ADDRESS" } } } } : {}),
     }),
   });
 }

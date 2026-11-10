@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { api, expectedLabel, Hint, inr, money, plainReason, plainStatus, SectionTitle, type EarningsMap, type Order, type TabKey } from "./shared";
 import { EarningsDialog } from "./earnings-dialog";
+import { ScamBadge } from "./scam-panel";
 import { RefundDialog } from "./refund-dialog";
 
 const reveal = {
@@ -93,6 +94,11 @@ export function OrdersPanel({ orders, earnings, onGo }: { orders: Order[]; earni
                   <div className="text-xs text-muted-foreground">
                     {new Date(o.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · paid {money(o.amount)}
                   </div>
+                  {!o.tracking && !o.refunded && (
+                    <button className="mt-1 block" onClick={() => onGo("scam", o.orderId)} aria-label={`Scam Radar for ${o.item}`}>
+                      <ScamBadge scam={o.scam} />
+                    </button>
+                  )}
                 </td>
                 <td className="py-3 px-2">
                   {e ? (

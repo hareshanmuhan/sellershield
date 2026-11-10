@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "motion/react";
-import { MessageCircleWarning, PackageSearch, Scale, PartyPopper } from "lucide-react";
+import { MessageCircleWarning, PackageSearch, Scale, PartyPopper, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { expectedLabel, money, plainReason, type EarningsMap, type Order, type TabKey } from "./shared";
 
@@ -21,6 +21,20 @@ export function buildTodos(orders: Order[], disputes: any[], earnings: EarningsM
     });
   }
   for (const o of orders) {
+    if (o.scam && o.scam.verdict !== "safe" && !o.tracking && !o.refunded) {
+      todos.push({
+        id: `s-${o.orderId}`,
+        icon: <ShieldAlert />,
+        title: `${o.scam.verdict === "stop" ? "Don't ship" : "Check before shipping"} ${o.item}`,
+        why: o.scam.reasons[0],
+        cta: "See why",
+        tab: "scam",
+        orderId: o.orderId,
+        urgent: o.scam.verdict === "stop",
+      });
+    }
+  }
+  for (const o of orders) {
     if (o.risk && o.risk.level !== "low" && !o.refunded) {
       todos.push({
         id: `r-${o.orderId}`,
@@ -34,7 +48,8 @@ export function buildTodos(orders: Order[], disputes: any[], earnings: EarningsM
     }
   }
   for (const o of orders) {
-    if (!o.tracking && !o.refunded) {
+    // Don't tell the seller to ship an order Scam Radar says to hold.
+    if (!o.tracking && !o.refunded && o.scam?.verdict !== "stop") {
       todos.push({
         id: `t-${o.orderId}`,
         icon: <PackageSearch />,

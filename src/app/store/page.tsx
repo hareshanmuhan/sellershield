@@ -1,5 +1,6 @@
 "use client";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Camera, Coffee, Wallet } from "lucide-react";
@@ -14,6 +15,10 @@ const PRODUCTS = [
 // Log in with your sandbox Personal (buyer) account when the PayPal window opens.
 export default function Store() {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
+  const [scamTest, setScamTest] = useState(false);
+  // PayPal's buttons keep the first createOrder they get, so read the checkbox through a ref.
+  const scamRef = useRef(false);
+  scamRef.current = scamTest;
 
   if (!clientId) {
     return (
@@ -29,6 +34,15 @@ export default function Store() {
         A pretend shop for testing. Pay with your sandbox buyer account; each purchase becomes a real sandbox order on
         your dashboard. No real money moves.
       </p>
+      <label className="mb-6 -mt-4 flex items-start gap-3 rounded-xl border border-dashed border-marigold bg-marigold-soft/60 p-3 max-w-xl cursor-pointer">
+        <input type="checkbox" checked={scamTest} onChange={(e) => setScamTest(e.target.checked)} className="mt-1 size-4 accent-[var(--shield)]" />
+        <span>
+          <span className="font-bold">Test Scam Radar</span>
+          <span className="block text-sm text-muted-foreground">
+            The next purchase ships to a made-up package-forwarding address, so the dashboard can show a warning.
+          </span>
+        </span>
+      </label>
       <div className="grid md:grid-cols-3 gap-5">
         {PRODUCTS.map((p, i) => (
           <motion.div
@@ -51,7 +65,7 @@ export default function Store() {
                 const r = await fetch("/api/orders", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ amount: p.price, item: p.name }),
+                  body: JSON.stringify({ amount: p.price, item: p.name, scamTest: scamRef.current }),
                 });
                 const d = await r.json();
                 if (!r.ok) throw new Error(d.error);
