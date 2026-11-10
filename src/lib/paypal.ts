@@ -117,16 +117,21 @@ export function getDispute(id: string) {
   return pp(`/v1/customer/disputes/${id}`);
 }
 
-export function provideEvidence(id: string, notes: string, tracking?: { carrier: string; number: string }) {
+export type EvidenceFile = { name: string; mimeType: string; data: Buffer };
+
+/** Photos go along as extra multipart parts next to the "input" JSON, as PayPal's docs show. */
+export function provideEvidence(id: string, notes: string, tracking?: { carrier: string; number: string }, files: EvidenceFile[] = []) {
   const evidence: Record<string, unknown> = {
-    evidence_type: tracking ? "PROOF_OF_FULFILLMENT" : "OTHER",
+    evidence_type: tracking || files.length ? "PROOF_OF_FULFILLMENT" : "OTHER",
     notes: notes.slice(0, 2000),
   };
   if (tracking) {
     evidence.evidence_info = { tracking_info: [{ carrier_name: tracking.carrier, tracking_number: tracking.number }] };
   }
+  if (files.length) evidence.documents = files.map((f) => ({ name: f.name }));
   const form = new FormData();
   form.append("input", new Blob([JSON.stringify({ evidences: [evidence] })], { type: "application/json" }));
+  files.forEach((f, i) => form.append(`file${i + 1}`, new Blob([new Uint8Array(f.data)], { type: f.mimeType }), f.name));
   return pp(`/v1/customer/disputes/${id}/provide-evidence`, { method: "POST", body: form });
 }
 

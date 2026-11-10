@@ -124,7 +124,7 @@ export default function Dashboard() {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.2 }}
             >
-              {tab === "orders" && <OrdersPanel orders={orders} earnings={earnings} onGo={go} />}
+              {tab === "orders" && <OrdersPanel orders={orders} earnings={earnings} onGo={go} onDone={refresh} />}
               {tab === "scam" && <ScamPanel orders={orders} onDone={refresh} />}
               {tab === "shipping" && <ShippingPanel orders={orders} focus={focus} onDone={refresh} />}
               {tab === "buyers" && <BuyersPanel orders={orders} focus={focus} onDone={refresh} />}

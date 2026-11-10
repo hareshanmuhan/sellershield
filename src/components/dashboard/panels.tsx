@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { ImageUp, Sparkles, Truck } from "lucide-react";
+import { Camera, ImageUp, Paperclip, Sparkles, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { api, expectedLabel, Hint, inr, money, plainReason, plainStatus, SectionTitle, type EarningsMap, type Order, type TabKey } from "./shared";
 import { EarningsDialog } from "./earnings-dialog";
 import { ScamBadge } from "./scam-panel";
+import { ProofDialog } from "./proof-dialog";
 import { RefundDialog } from "./refund-dialog";
 
 const reveal = {
@@ -47,8 +48,9 @@ function riskBadge(level?: string) {
 }
 
 /* ---------------- Orders ---------------- */
-export function OrdersPanel({ orders, earnings, onGo }: { orders: Order[]; earnings: EarningsMap; onGo: (tab: TabKey, orderId?: string) => void }) {
+export function OrdersPanel({ orders, earnings, onGo, onDone }: { orders: Order[]; earnings: EarningsMap; onGo: (tab: TabKey, orderId?: string) => void; onDone: () => void }) {
   const [detail, setDetail] = useState("");
+  const [proofFor, setProofFor] = useState("");
   if (orders.length === 0) {
     return (
       <div className="text-center py-10">
@@ -64,7 +66,7 @@ export function OrdersPanel({ orders, earnings, onGo }: { orders: Order[]; earni
   return (
     <div className="relative overflow-x-auto -mx-2">
       {/* relative: keeps the table's absolutely positioned sr-only label inside this scroll box on phones. */}
-      <table className="w-full text-sm min-w-[760px]">
+      <table className="w-full text-sm min-w-[900px]">
         <thead className="text-left text-muted-foreground">
           <tr>
             <th className="font-normal py-2 px-2">What sold</th>
@@ -136,6 +138,9 @@ export function OrdersPanel({ orders, earnings, onGo }: { orders: Order[]; earni
                   {!o.tracking && !o.refunded && (
                     <Button size="sm" variant="outline" onClick={() => onGo("shipping", o.orderId)}>Add tracking</Button>
                   )}{" "}
+                  <Button size="sm" variant="ghost" onClick={() => setProofFor(o.orderId)}>
+                    <Camera /> {o.proof?.length ? `Photos (${o.proof.filter((p) => p.good).length}/${o.proof.length} good)` : "Packing photos"}
+                  </Button>{" "}
                   <Button size="sm" variant="ghost" onClick={() => onGo("buyers", o.orderId)}>Buyer message</Button>
                 </td>
               </tr>
@@ -143,6 +148,7 @@ export function OrdersPanel({ orders, earnings, onGo }: { orders: Order[]; earni
           })}
         </tbody>
       </table>
+      <ProofDialog order={orders.find((o) => o.orderId === proofFor)} open={!!proofFor} onOpenChange={(v) => !v && setProofFor("")} onDone={onDone} />
       <EarningsDialog order={picked} e={picked && earnings[picked.orderId]} open={!!picked} onOpenChange={(v) => !v && setDetail("")} />
     </div>
   );
@@ -421,9 +427,16 @@ export function DisputesPanel({ disputes, onDone }: { disputes: any[]; onDone: (
   async function submit(action: "evidence" | "accept") {
     setBusy("submit");
     try {
-      await api(`/api/disputes/${active.dispute.id}/submit`, { action, notes, tracking: active.tracking });
+      const r = await api(`/api/disputes/${active.dispute.id}/submit`, { action, notes, tracking: active.tracking });
       toast.success(action === "accept" ? "Claim accepted" : "Evidence sent to PayPal", {
-        description: action === "accept" ? "PayPal refunds the buyer and closes the case." : "PayPal will review it and let you know.",
+        description:
+          action === "accept"
+            ? "PayPal refunds the buyer and closes the case."
+            : r.photosAttached
+              ? `${r.photosAttached} packing photo${r.photosAttached === 1 ? "" : "s"} attached. PayPal will review it.`
+              : r.photoError
+                ? `PayPal didn't take the photos (${r.photoError}), so only the note and tracking were sent.`
+                : "PayPal will review it and let you know.",
       });
       setActive(null);
       onDone();
@@ -472,6 +485,16 @@ export function DisputesPanel({ disputes, onDone }: { disputes: any[]; onDone: (
             )}
             {active.draft.checklist?.length > 0 && (
               <ul className="list-disc pl-5 text-sm">{active.draft.checklist.map((c: string) => <li key={c}>{c}</li>)}</ul>
+            )}
+            {active.proof?.goodCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Paperclip className="size-4 text-shield" />
+                <span className="font-bold">{active.proof.goodCount} packing photo{active.proof.goodCount === 1 ? "" : "s"} will be attached:</span>
+                {active.proof.photos.map((p: any) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={p.file} src={`/api/proof/${active.orderId}/${p.file}`} alt={p.feedback} className="size-12 rounded-md object-cover border" />
+                ))}
+              </div>
             )}
             <div className="grid gap-1.5">
               <Label htmlFor="evidence">Your note to PayPal</Label>
