@@ -31,6 +31,36 @@ export type Health = {
   baseline: { sales: number; disputes: number };
 };
 
+export type Earnings = {
+  orderId: string;
+  buyerPaid: number;
+  paypalFee: number;
+  feeSource: "PayPal" | "estimate";
+  net: number;
+  refunded: number;
+  kept: number;
+  currencyLoss: number;
+  inrEstimate: number | null;
+  fx: { rate: number; date: string; source: string } | null;
+  ratesAsOf: string;
+  expected: { by: string | null; rule: string; kind: "hold" | "after_delivery" | "none" };
+};
+
+export type EarningsMap = Record<string, Earnings>;
+
+export const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
+export const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+
+/** "Money expected by Tue, Nov 25" in words a seller reads at a glance. */
+export function expectedLabel(e?: Earnings) {
+  if (!e?.expected.by) return null;
+  const days = Math.ceil((new Date(e.expected.by).getTime() - Date.now()) / 86_400_000);
+  const when = days <= 0 ? "any day now" : days === 1 ? "tomorrow" : `in ${days} days`;
+  return { date: shortDate(e.expected.by), when, kind: e.expected.kind, rule: e.expected.rule };
+}
+
 export type TabKey = "orders" | "shipping" | "buyers" | "disputes" | "updates";
 
 export async function api<T = any>(url: string, body?: unknown): Promise<T> {

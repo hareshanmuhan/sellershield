@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { api, Hint, money, plainReason, plainStatus, SectionTitle, type Order, type TabKey } from "./shared";
+import { api, expectedLabel, Hint, inr, money, plainReason, plainStatus, SectionTitle, type EarningsMap, type Order, type TabKey } from "./shared";
+import { EarningsDialog } from "./earnings-dialog";
 import { RefundDialog } from "./refund-dialog";
 
 const reveal = {
@@ -45,7 +46,8 @@ function riskBadge(level?: string) {
 }
 
 /* ---------------- Orders ---------------- */
-export function OrdersPanel({ orders, onGo }: { orders: Order[]; onGo: (tab: TabKey, orderId?: string) => void }) {
+export function OrdersPanel({ orders, earnings, onGo }: { orders: Order[]; earnings: EarningsMap; onGo: (tab: TabKey, orderId?: string) => void }) {
+  const [detail, setDetail] = useState("");
   if (orders.length === 0) {
     return (
       <div className="text-center py-10">
@@ -57,14 +59,20 @@ export function OrdersPanel({ orders, onGo }: { orders: Order[]; onGo: (tab: Tab
       </div>
     );
   }
+  const picked = orders.find((o) => o.orderId === detail);
   return (
-    // relative: keeps the table's absolutely positioned sr-only label inside this scroll box on phones.
     <div className="relative overflow-x-auto -mx-2">
-      <table className="w-full text-sm min-w-[620px]">
+      {/* relative: keeps the table's absolutely positioned sr-only label inside this scroll box on phones. */}
+      <table className="w-full text-sm min-w-[760px]">
         <thead className="text-left text-muted-foreground">
           <tr>
             <th className="font-normal py-2 px-2">What sold</th>
-            <th className="font-normal px-2">Paid</th>
+            <th className="font-normal px-2">
+              <span className="inline-flex items-center gap-1">
+                You keep<Hint>What&apos;s left after PayPal&apos;s fee and any refunds. Tap the amount for the full breakdown in rupees.</Hint>
+              </span>
+            </th>
+            <th className="font-normal px-2">Money expected</th>
             <th className="font-normal px-2">
               <span className="inline-flex items-center gap-1">
                 Tracking<Hint>The carrier&apos;s parcel number. PayPal uses it to prove you shipped.</Hint>
@@ -75,40 +83,61 @@ export function OrdersPanel({ orders, onGo }: { orders: Order[]; onGo: (tab: Tab
           </tr>
         </thead>
         <tbody>
-          {orders.map((o) => (
-            <tr key={o.orderId} className="border-t align-top">
-              <td className="py-3 px-2">
-                <div className="font-bold">{o.item}</div>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(o.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · order {o.orderId}
-                </div>
-              </td>
-              <td className="py-3 px-2 tabular-nums">
-                {money(o.amount)}
-                {o.refunded && <div className="text-xs text-shield">{money(o.refunded.amount)} refunded</div>}
-              </td>
-              <td className="py-3 px-2">
-                {o.tracking ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Truck className="size-4 text-shield" /> {o.tracking.carrier} {o.tracking.number}
-                  </span>
-                ) : o.refunded ? (
-                  <span className="text-muted-foreground">Not needed</span>
-                ) : (
-                  <Badge className="border-0 bg-marigold-soft text-marigold-ink font-bold">Missing</Badge>
-                )}
-              </td>
-              <td className="py-3 px-2" title={o.risk?.reason}>{riskBadge(o.risk?.level)}</td>
-              <td className="py-3 px-2 text-right whitespace-nowrap">
-                {!o.tracking && !o.refunded && (
-                  <Button size="sm" variant="outline" onClick={() => onGo("shipping", o.orderId)}>Add tracking</Button>
-                )}{" "}
-                <Button size="sm" variant="ghost" onClick={() => onGo("buyers", o.orderId)}>Buyer message</Button>
-              </td>
-            </tr>
-          ))}
+          {orders.map((o) => {
+            const e = earnings[o.orderId];
+            const exp = expectedLabel(e);
+            return (
+              <tr key={o.orderId} className="border-t align-top">
+                <td className="py-3 px-2">
+                  <div className="font-bold">{o.item}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(o.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · paid {money(o.amount)}
+                  </div>
+                </td>
+                <td className="py-3 px-2">
+                  {e ? (
+                    <button onClick={() => setDetail(o.orderId)} className="text-left rounded-md hover:bg-muted px-1 -mx-1 underline decoration-dotted underline-offset-4">
+                      <span className="font-bold tabular-nums">{money(e.kept)}</span>
+                      {e.inrEstimate != null && <span className="block text-xs text-muted-foreground">≈ {inr(e.inrEstimate)} estimate</span>}
+                    </button>
+                  ) : (
+                    <span className="text-muted-foreground">…</span>
+                  )}
+                </td>
+                <td className="py-3 px-2">
+                  {exp ? (
+                    <span title={exp.rule}>
+                      <span className={cn("font-bold", exp.kind === "hold" && "text-marigold-ink")}>{exp.date}</span>
+                      <span className="block text-xs text-muted-foreground">{exp.kind === "hold" ? `up to 21-day hold, ${exp.when}` : exp.when}</span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">{e ? "Nothing due" : "…"}</span>
+                  )}
+                </td>
+                <td className="py-3 px-2">
+                  {o.tracking ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Truck className="size-4 text-shield shrink-0" /> {o.tracking.carrier} {o.tracking.number}
+                    </span>
+                  ) : o.refunded ? (
+                    <span className="text-muted-foreground">Not needed</span>
+                  ) : (
+                    <Badge className="border-0 bg-marigold-soft text-marigold-ink font-bold">Missing</Badge>
+                  )}
+                </td>
+                <td className="py-3 px-2" title={o.risk?.reason}>{riskBadge(o.risk?.level)}</td>
+                <td className="py-3 px-2 text-right whitespace-nowrap">
+                  {!o.tracking && !o.refunded && (
+                    <Button size="sm" variant="outline" onClick={() => onGo("shipping", o.orderId)}>Add tracking</Button>
+                  )}{" "}
+                  <Button size="sm" variant="ghost" onClick={() => onGo("buyers", o.orderId)}>Buyer message</Button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+      <EarningsDialog order={picked} e={picked && earnings[picked.orderId]} open={!!picked} onOpenChange={(v) => !v && setDetail("")} />
     </div>
   );
 }
@@ -315,6 +344,7 @@ export function BuyersPanel({ orders, focus, onDone }: { orders: Order[]; focus:
                 {Number(risk.refundAmount) > 0 && ` of ${money(risk.refundAmount)}`}
               </div>
             </div>
+            {risk.cost && <CostCompare cost={risk.cost} />}
             <div className="rounded-lg bg-card p-3 whitespace-pre-wrap text-sm">{risk.reply}</div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={copyReply}>Copy reply</Button>
@@ -327,6 +357,39 @@ export function BuyersPanel({ orders, focus, onDone }: { orders: Order[]; focus:
       </AnimatePresence>
 
       <RefundDialog order={order} amount={risk?.refundAmount || ""} note={risk?.reply || ""} open={refundOpen} onOpenChange={setRefundOpen} onDone={onDone} />
+    </div>
+  );
+}
+
+type Cost = {
+  refundAmount: number;
+  paypalFeeKept: number;
+  disputeFee: number;
+  keepAfterRefund: number;
+  keepAfterLostDispute: number;
+  savedByRefunding: number;
+};
+
+/** Side by side: refund now vs. lose a dispute later. All numbers come from code, not the AI. */
+function CostCompare({ cost }: { cost: Cost }) {
+  const signed = (n: number) => (n < 0 ? `−${money(-n)}` : money(n));
+  return (
+    <div className="grid sm:grid-cols-2 gap-2 text-sm">
+      <div className="rounded-lg bg-card p-3">
+        <div className="text-muted-foreground">
+          {cost.refundAmount > 0 ? `If you refund ${money(cost.refundAmount)} now` : "If you just reply now"}
+        </div>
+        <div className="font-heading text-xl font-bold tabular-nums">You keep {signed(cost.keepAfterRefund)}</div>
+        <div className="text-xs text-muted-foreground">PayPal keeps its {money(cost.paypalFeeKept)} fee either way.</div>
+      </div>
+      <div className="rounded-lg bg-card p-3 border border-coral/30">
+        <div className="text-muted-foreground">If the buyer opens a dispute and you lose</div>
+        <div className="font-heading text-xl font-bold tabular-nums text-coral">You end up {signed(cost.keepAfterLostDispute)}</div>
+        <div className="text-xs text-muted-foreground">Full refund plus a {money(cost.disputeFee)} dispute fee, and you may lose the item.</div>
+      </div>
+      {cost.savedByRefunding > 0 && (
+        <p className="sm:col-span-2 font-bold text-shield">Refunding now leaves you {money(cost.savedByRefunding)} better off than losing a dispute.</p>
+      )}
     </div>
   );
 }

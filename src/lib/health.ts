@@ -1,9 +1,12 @@
 // Account-health math. Plain code, no AI: numbers must be exact.
 // Thresholds come from PayPal's published seller rules.
-export const RATE_LIMIT = 0.015; // 1.5% dispute rate
-export const MIN_SALES_FOR_HIGH_VOLUME = 100; // >100 sales in 3 months
-export const STANDARD_FEE = 15;
-export const HIGH_VOLUME_FEE = 30;
+import {
+  DISPUTE_FEE_HIGH_VOLUME as HIGH_VOLUME_FEE,
+  DISPUTE_FEE_STANDARD as STANDARD_FEE,
+  DISPUTE_RATE_LIMIT as RATE_LIMIT,
+  MIN_SALES_FOR_HIGH_VOLUME,
+} from "./config";
+export { RATE_LIMIT, MIN_SALES_FOR_HIGH_VOLUME, STANDARD_FEE, HIGH_VOLUME_FEE };
 
 export type Health = {
   sales: number;

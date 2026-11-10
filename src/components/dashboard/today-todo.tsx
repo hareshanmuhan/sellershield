@@ -2,11 +2,11 @@
 import { motion } from "motion/react";
 import { MessageCircleWarning, PackageSearch, Scale, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { money, plainReason, type Order, type TabKey } from "./shared";
+import { expectedLabel, money, plainReason, type EarningsMap, type Order, type TabKey } from "./shared";
 
 type Todo = { id: string; icon: React.ReactNode; title: string; why: string; cta: string; tab: TabKey; orderId?: string; urgent?: boolean };
 
-export function buildTodos(orders: Order[], disputes: any[]): Todo[] {
+export function buildTodos(orders: Order[], disputes: any[], earnings: EarningsMap = {}): Todo[] {
   const todos: Todo[] = [];
   for (const d of disputes) {
     if (d.status !== "WAITING_FOR_SELLER_RESPONSE" && d.status !== "OPEN") continue;
@@ -26,7 +26,7 @@ export function buildTodos(orders: Order[], disputes: any[]): Todo[] {
         id: `r-${o.orderId}`,
         icon: <MessageCircleWarning />,
         title: `Reply to the buyer of ${o.item}`,
-        why: `They sound ${o.risk.level === "high" ? "very " : ""}unhappy. A quick fix now is cheaper than a $15 dispute.`,
+        why: `They sound ${o.risk.level === "high" ? "very " : ""}unhappy. A quick fix now costs less than a dispute fee.`,
         cta: "See the reply",
         tab: "buyers",
         orderId: o.orderId,
@@ -39,7 +39,12 @@ export function buildTodos(orders: Order[], disputes: any[]): Todo[] {
         id: `t-${o.orderId}`,
         icon: <PackageSearch />,
         title: `Add tracking for ${o.item}`,
-        why: `PayPal may hold this ${money(o.amount)} until it can see the parcel moving.`,
+        why: (() => {
+          const exp = expectedLabel(earnings[o.orderId]);
+          return exp
+            ? `Without tracking, ${money(earnings[o.orderId].kept)} may be held until ${exp.date}. With it, about a day after delivery.`
+            : `PayPal may hold this ${money(o.amount)} until it can see the parcel moving.`;
+        })(),
         cta: "Add tracking",
         tab: "shipping",
         orderId: o.orderId,

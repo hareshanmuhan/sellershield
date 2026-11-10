@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, type Health, type Order, type TabKey } from "@/components/dashboard/shared";
+import { api, type EarningsMap, type Health, type Order, type TabKey } from "@/components/dashboard/shared";
 import { HealthHero } from "@/components/dashboard/health-hero";
 import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { TodayTodo, buildTodos } from "@/components/dashboard/today-todo";
@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [earnings, setEarnings] = useState<EarningsMap>({});
   const [tab, setTab] = useState<TabKey>("orders");
   const [focus, setFocus] = useState("");
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -34,6 +35,7 @@ export default function Dashboard() {
       setOrders(o);
       setEvents(e);
       api("/api/disputes").then(setDisputes).catch(() => setDisputes([]));
+      api("/api/earnings").then((r) => setEarnings(r.orders)).catch(() => {});
     } catch (e: any) {
       toast.error("Couldn't load your account", { description: e.message });
     }
@@ -45,7 +47,7 @@ export default function Dashboard() {
 
   const held = orders.filter((o) => !o.tracking && !o.refunded);
   const heldTotal = held.reduce((s, o) => s + Number(o.amount || 0), 0);
-  const todos = useMemo(() => buildTodos(orders, disputes), [orders, disputes]);
+  const todos = useMemo(() => buildTodos(orders, disputes, earnings), [orders, disputes, earnings]);
 
   const go = useCallback((t: TabKey, orderId?: string) => {
     setTab(t);
@@ -103,7 +105,7 @@ export default function Dashboard() {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.2 }}
             >
-              {tab === "orders" && <OrdersPanel orders={orders} onGo={go} />}
+              {tab === "orders" && <OrdersPanel orders={orders} earnings={earnings} onGo={go} />}
               {tab === "shipping" && <ShippingPanel orders={orders} focus={focus} onDone={refresh} />}
               {tab === "buyers" && <BuyersPanel orders={orders} focus={focus} onDone={refresh} />}
               {tab === "disputes" && <DisputesPanel disputes={disputes} onDone={refresh} />}

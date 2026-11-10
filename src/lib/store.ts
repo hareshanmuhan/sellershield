@@ -14,6 +14,40 @@ export type Order = {
   refunded?: { amount: string; at: string };
   buyerMessage?: string;
   risk?: { level: "low" | "medium" | "high"; reason: string };
+  /** PayPal's own numbers from the capture's seller_receivable_breakdown. */
+  breakdown?: { gross: string; fee: string; net: string; currency: string };
+  /** Where the buyer asked PayPal to ship, and what PayPal knows about the payer. */
+  shipTo?: Address & { name?: string };
+  payer?: { name?: string; email?: string; countryCode?: string; address?: Address };
+  scam?: ScamResult;
+  proof?: ProofPhoto[];
+};
+
+export type Address = {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  countryCode?: string;
+};
+
+export type ScamResult = {
+  verdict: "safe" | "check" | "stop";
+  headline: string;
+  reasons: string[];
+  whatToDo: string;
+  flags: string[];
+  checkedAt: string;
+};
+
+export type ProofPhoto = {
+  file: string;
+  at: string;
+  mimeType: string;
+  good: boolean;
+  feedback: string;
+  checks?: { itemMatches: boolean; labelVisible: boolean; boxSealed: boolean };
 };
 
 export type WebhookEvent = { id: string; type: string; summary: string; at: string; resourceId?: string };

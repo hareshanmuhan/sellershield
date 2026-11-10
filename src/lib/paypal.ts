@@ -73,6 +73,14 @@ export function addTracking(orderId: string, captureId: string, carrier: string,
   return pp(`/v2/checkout/orders/${orderId}/track`, { method: "POST", body: JSON.stringify(body) });
 }
 
+export function getOrder(orderId: string) {
+  return pp(`/v2/checkout/orders/${orderId}`);
+}
+
+export function getCapture(captureId: string) {
+  return pp(`/v2/payments/captures/${captureId}`);
+}
+
 // ---------- Refunds ----------
 export function refundCapture(captureId: string, amount: string, note: string) {
   return pp(`/v2/payments/captures/${captureId}/refund`, {
