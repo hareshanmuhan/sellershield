@@ -3,12 +3,13 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { Camera, Coffee, Wallet } from "lucide-react";
+import { Camera, Coffee, Footprints, Wallet } from "lucide-react";
 
 const PRODUCTS = [
   { name: "Handmade leather wallet", price: "45.00", icon: Wallet, tint: "bg-marigold-soft text-marigold-ink" },
   { name: "Vintage film camera", price: "120.00", icon: Camera, tint: "bg-shield-soft text-shield" },
   { name: "Ceramic coffee mug set", price: "28.00", icon: Coffee, tint: "bg-coral-soft text-coral" },
+  { name: "Running shoes", price: "100.00", icon: Footprints, tint: "bg-shield-soft text-shield" },
 ];
 
 // A tiny storefront that creates REAL sandbox orders, so the dashboard has real PayPal data.
@@ -43,7 +44,7 @@ export default function Store() {
           </span>
         </span>
       </label>
-      <div className="grid md:grid-cols-3 gap-5">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {PRODUCTS.map((p, i) => (
           <motion.div
             key={p.name}

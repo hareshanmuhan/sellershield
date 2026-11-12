@@ -45,3 +45,6 @@ data/
 
 # local sandbox test logins
 sandbox-buyer.local.txt
+
+# local test photos (not for the public repo)
+test_images/
