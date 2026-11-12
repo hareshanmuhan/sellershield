@@ -9,7 +9,10 @@ SellerShield is an AI account-health agent for small PayPal sellers. Next.js 15 
 - **AI tracking autopilot**: reads shipping emails / label photos, extracts carrier + tracking number, adds tracking via Orders v2 `POST /v2/checkout/orders/{id}/track`.
 - **AI pre-dispute fixer**: rates buyer messages for dispute risk, suggests a refund via Payments v2 refund, only after the seller approves.
 - **AI dispute responder**: Disputes API `provide-evidence` / `accept-claim`.
-- **"Ask about my account" chat** grounded in the seller's real orders/disputes.
+- **Real earnings + money countdown**: fee/net from the capture's `seller_receivable_breakdown`, ~3% currency loss, INR estimate from the FBIL rate (`src/lib/earnings.ts`, `fx.ts`). All fees and rules live in `src/lib/config.ts`.
+- **Scam Radar**: code rules (`src/lib/scam.ts`) + Gemini; the code verdict is a floor the AI can't lower.
+- **Proof Vault**: up to 3 packing photos per order in `data/proof/<orderId>/`, checked by Gemini vision; attached to dispute evidence.
+- **Chat agent** (`src/lib/agent.ts`): Gemini function calling. Read-only tools run directly; tracking, refunds and dispute answers become confirm cards.
 
 ## Key files
 - `src/lib/gemini.ts`: Google Gemini via REST (`askJSON`), model from `GEMINI_MODEL` (default `gemini-2.5-flash`).
@@ -29,5 +32,10 @@ SellerShield is an AI account-health agent for small PayPal sellers. Next.js 15 
 - New disputes can take a few minutes to appear in the unfiltered `GET /v1/customer/disputes` list.
 - For item-not-received disputes, `provide-evidence` rejects `evidence_type: OTHER` (`EVIDENCE_TYPE_IS_NOT_ALLOWED`); send tracking (`PROOF_OF_FULFILLMENT`).
 - Sandbox test buyer login lives in `sandbox-buyer.local.txt` (gitignored).
+- `provide-evidence` only works while the dispute is `WAITING_FOR_SELLER_RESPONSE`; otherwise `ACTION_NOT_ALLOWED_IN_CURRENT_DISPUTE_STATE`.
+- The payer only comes back with a country code (no full address), so Scam Radar compares countries and names.
+- Captures under dispute may have no `seller_receivable_breakdown`; earnings then use the labelled fee estimate.
+- Sandbox buyer emails end in example.com; the Scam Radar prompt tells Gemini not to judge by email.
+- The store's PayPal popup doesn't open when the in-app browser pane is hidden; use `/checkoutnow?token=<orderId>&locale.x=en_US&country.x=US`, then call the capture route.
 
 See `README.md` for setup and the full sandbox test flow.
