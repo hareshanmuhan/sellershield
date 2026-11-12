@@ -44,11 +44,14 @@ Return JSON: {"shows":"what the photo shows in under 12 words","itemVisible":boo
   // A closed box shows no item at all; that's "unknown", not "wrong item".
   const matches = v.itemVisible ? v.itemMatches : null;
   const checks = { itemMatches: matches === true, labelVisible: !!v.labelVisible, boxSealed: !!v.boxSealed };
-  // Code decides: a wrong item or an unclear photo is never good proof; otherwise it must show at least one useful thing.
-  const good = !!v.usable && matches !== false && (checks.itemMatches || checks.labelVisible || checks.boxSealed);
-  const feedback = good
-    ? `Good proof: ${v.shows}`
-    : `Retake: ${matches === false ? `this doesn't look like ${o.item}. ` : ""}${v.retakeReason || "make the item, label or sealed box clearly visible"}`;
+  // Code decides from the checks, not from Gemini's own verdict:
+  // good proof = the right item AND (a sealed box OR a readable label/size).
+  const good = checks.itemMatches && (checks.boxSealed || checks.labelVisible);
+  const missing = [
+    !checks.itemMatches && (matches === false ? `the right item (this doesn't look like ${o.item})` : `the ${o.item} itself`),
+    !checks.boxSealed && !checks.labelVisible && "a sealed box or a readable label/size",
+  ].filter(Boolean);
+  const feedback = good ? `Good proof: ${v.shows}` : `Retake: show ${missing.join(" and ")}`;
   return { good, feedback, checks };
 }
 
