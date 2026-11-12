@@ -22,3 +22,30 @@ export async function askJSON<T>(prompt: string, image?: { mimeType: string; bas
   const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "{}";
   return JSON.parse(text.replace(/^```json\s*|```$/g, "")) as T;
 }
+
+// ---------- Function calling (used by the chat agent) ----------
+export type GeminiPart = { text?: string; functionCall?: { name: string; args?: Record<string, unknown> }; functionResponse?: { name: string; response: unknown }; [k: string]: unknown };
+export type GeminiContent = { role: "user" | "model"; parts: GeminiPart[] };
+export type FunctionDeclaration = { name: string; description: string; parameters?: Record<string, unknown> };
+
+/** One model turn with tools. Returns the model's content as-is, so it can be sent back unchanged (Gemini 2.5 needs its thought signatures). */
+export async function generateWithTools(system: string, contents: GeminiContent[], functions: FunctionDeclaration[]): Promise<GeminiContent> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY missing in .env.local");
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents,
+      tools: [{ functionDeclarations: functions }],
+      toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+      generationConfig: { temperature: 0.2 },
+    }),
+  });
+  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const content = data?.candidates?.[0]?.content;
+  return { role: "model", parts: content?.parts?.length ? content.parts : [{ text: "" }] };
+}

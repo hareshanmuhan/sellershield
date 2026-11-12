@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { ArrowUp, Check, PackageCheck, Undo2, ArrowRightCircle } from "lucide-react";
+import { ArrowUp, Check, PackageCheck, Undo2, ArrowRightCircle, Scale, CircleCheck, CircleAlert, Hourglass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -13,13 +13,15 @@ import { RefundDialog } from "./refund-dialog";
 
 type Action =
   | { type: "add_tracking"; orderId: string; item?: string; soldAt?: string; carrier: string; trackingNumber: string }
-  | { type: "refund"; orderId: string; item?: string; soldAt?: string; amount: string; note?: string }
+  | { type: "refund"; orderId: string; item?: string; soldAt?: string; amount: string; note?: string; keepAfterRefund?: number }
+  | { type: "submit_evidence"; disputeId: string; item?: string; notes: string; tracking: { carrier: string; number: string } | null; photos: number }
   | { type: "open"; tab: TabKey; orderId?: string; item?: string; label?: string };
 
-type Msg = { id: number; role: "user" | "bot"; text: string; actions?: Action[] };
+type Step = { tool: string; label: string; status: "done" | "needs_confirm" | "error"; detail?: string };
+type Msg = { id: number; role: "user" | "bot"; text: string; actions?: Action[]; steps?: Step[] };
 type CardState = "waiting" | "running" | "done" | "skipped";
 
-const starters = ["What should I do first today?", "Why could my money be held?", "How close am I to PayPal's dispute line?"];
+const starters = ["What should I do first today?", "How much will I really get in rupees this week?", "Is my newest order safe to ship?"];
 
 export function ChatSheet({
   health,
@@ -52,8 +54,8 @@ export function ChatSheet({
     setQ("");
     setBusy(true);
     try {
-      const r = await api("/api/assistant", { question: text, health, history });
-      setMsgs((m) => [...m, { id: nextId.current++, role: "bot", text: r.answer, actions: r.actions }]);
+      const r = await api("/api/agent", { question: text, history });
+      setMsgs((m) => [...m, { id: nextId.current++, role: "bot", text: r.answer, actions: r.actions, steps: r.steps }]);
     } catch (e: any) {
       setMsgs((m) => [...m, { id: nextId.current++, role: "bot", text: `I couldn't answer that: ${e.message}` }]);
     }
@@ -73,6 +75,18 @@ export function ChatSheet({
       return;
     }
     mark(key, "running");
+    if (a.type === "submit_evidence") {
+      try {
+        const r = await api(`/api/disputes/${a.disputeId}/submit`, { action: "evidence", notes: a.notes, tracking: a.tracking });
+        toast.success("Evidence sent to PayPal", { description: r.photosAttached ? `${r.photosAttached} packing photo(s) attached.` : "PayPal will review it." });
+        mark(key, "done");
+        onChanged();
+      } catch (e: any) {
+        toast.error("PayPal didn't accept the evidence", { description: e.message });
+        mark(key, "waiting");
+      }
+      return;
+    }
     try {
       await api("/api/tracking/apply", { orderId: a.orderId, carrier: a.carrier, trackingNumber: a.trackingNumber });
       toast.success("Tracking added to PayPal", { description: `${a.item}: ${a.carrier} ${a.trackingNumber}` });
@@ -147,6 +161,7 @@ export function ChatSheet({
                 >
                   {m.text}
                 </div>
+                {m.steps && m.steps.length > 0 && <Steps steps={m.steps} />}
                 {m.actions?.map((a, i) => {
                   const key = `${m.id}-${i}`;
                   return <ActionCard key={key} action={a} state={cards[key] || "waiting"} onYes={() => run(key, a)} onNo={() => mark(key, "skipped")} />;
@@ -212,6 +227,29 @@ export function ChatSheet({
   );
 }
 
+const stepIcon = { done: CircleCheck, needs_confirm: Hourglass, error: CircleAlert } as const;
+
+/** What the agent did, in order, so the seller can see how it got its answer. */
+function Steps({ steps }: { steps: Step[] }) {
+  return (
+    <ol className="w-[88%] flex flex-col gap-1 rounded-xl border bg-card/70 px-3 py-2 text-sm" aria-label="What SellerShield did">
+      {steps.map((s, i) => {
+        const Icon = stepIcon[s.status];
+        return (
+          <motion.li key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.12 }} className="flex items-start gap-2">
+            <Icon className={cn("size-4 mt-0.5 shrink-0", s.status === "done" ? "text-shield" : s.status === "error" ? "text-coral" : "text-marigold-ink")} />
+            <span>
+              <span className="font-bold">{s.label}</span>
+              {s.detail && <span className="text-muted-foreground"> · {s.detail}</span>}
+              {s.status === "needs_confirm" && <span className="text-marigold-ink"> · waiting for you</span>}
+            </span>
+          </motion.li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function ActionCard({ action, state, onYes, onNo }: { action: Action; state: CardState; onYes: () => void; onNo: () => void }) {
   // Several orders can share an item name, so say when this one sold.
   const sold =
@@ -220,10 +258,24 @@ function ActionCard({ action, state, onYes, onNo }: { action: Action; state: Car
       : "";
   const view =
     action.type === "add_tracking"
-      ? { icon: <PackageCheck />, title: `Add tracking to ${action.item ?? "this order"}`, detail: `${action.carrier} ${action.trackingNumber}`, yes: "Add tracking", done: "Tracking added" }
+      ? { icon: <PackageCheck />, title: `Add tracking to ${action.item ?? "this order"}`, detail: `${action.carrier} ${action.trackingNumber}`, yes: "Confirm: add tracking", done: "Tracking added" }
       : action.type === "refund"
-        ? { icon: <Undo2 />, title: `Refund ${money(action.amount)} for ${action.item ?? "this order"}`, detail: "You'll see the amount once more before it's sent.", yes: "Review refund", done: "Refunded" }
-        : { icon: <ArrowRightCircle />, title: action.label || "Open the right screen", detail: action.item, yes: "Take me there", done: "" };
+        ? {
+            icon: <Undo2 />,
+            title: `Refund ${money(action.amount)} for ${action.item ?? "this order"}`,
+            detail: `${action.keepAfterRefund != null ? `You'd keep ${money(action.keepAfterRefund)} of this sale. ` : ""}You'll see the amount once more before it's sent.`,
+            yes: "Confirm: review refund",
+            done: "Refunded",
+          }
+        : action.type === "submit_evidence"
+          ? {
+              icon: <Scale />,
+              title: `Send your dispute answer${action.item ? ` for ${action.item}` : ""}`,
+              detail: `${action.notes.slice(0, 160)}${action.notes.length > 160 ? "…" : ""}${action.tracking ? ` Tracking ${action.tracking.carrier} ${action.tracking.number}.` : ""}${action.photos ? ` ${action.photos} packing photo(s) attached.` : ""}`,
+              yes: "Confirm: send to PayPal",
+              done: "Sent to PayPal",
+            }
+          : { icon: <ArrowRightCircle />, title: action.label || "Open the right screen", detail: action.item, yes: "Take me there", done: "" };
 
   if (action.type === "open") {
     return (
