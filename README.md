@@ -4,7 +4,7 @@
 
 Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). Runs on the PayPal **sandbox**.
 
-**Live demo:** _coming soon_
+**Live demo:** https://sellershield-ib2c.onrender.com (free Render instance: the first visit after a quiet spell can take about a minute to wake up)
 
 ## The problem
 
