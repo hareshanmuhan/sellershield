@@ -58,9 +58,18 @@ type DB = { orders: Order[]; events: WebhookEvent[] };
 
 const FILE = path.join(process.cwd(), "data", "db.json");
 
+// Demo data (real sandbox orders) used when data/db.json doesn't exist yet,
+// e.g. on a fresh deploy whose disk was wiped, so the dashboard isn't empty for judges.
+const SEED = path.join(process.cwd(), "seed", "demo-db.json");
+
 async function load(): Promise<DB> {
   try {
     return JSON.parse(await fs.readFile(FILE, "utf8"));
+  } catch {}
+  try {
+    const db: DB = JSON.parse(await fs.readFile(SEED, "utf8"));
+    await save(db);
+    return db;
   } catch {
     return { orders: [], events: [] };
   }

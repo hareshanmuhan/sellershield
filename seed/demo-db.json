@@ -1,0 +1,185 @@
+{
+  "orders": [
+    {
+      "orderId": "5YC286364P6523749",
+      "captureId": "1PN678973T353514Y",
+      "amount": "120.00",
+      "item": "Vintage film camera",
+      "buyerEmail": "sb-xrufm53811894@personal.example.com",
+      "createdAt": "2026-11-10T16:43:15.863Z",
+      "breakdown": {
+        "gross": "120.00",
+        "fee": "4.68",
+        "net": "115.32",
+        "currency": "USD"
+      },
+      "shipTo": {
+        "line1": "1000 Airport Rd, Suite 240",
+        "city": "New Castle",
+        "state": "DE",
+        "postalCode": "19720",
+        "countryCode": "US",
+        "name": "Mike Ross c/o QuickBox Forwarding"
+      },
+      "payer": {
+        "name": "John Doe",
+        "email": "sb-xrufm53811894@personal.example.com",
+        "countryCode": "US",
+        "address": {
+          "countryCode": "US"
+        }
+      },
+      "scam": {
+        "verdict": "stop",
+        "headline": "Don't ship yet",
+        "reasons": [
+          "The shipping address looks like a package-forwarding warehouse, which is often used to resend goods abroad.",
+          "It ships to \"Mike Ross c/o QuickBox Forwarding\", not the PayPal account holder \"John Doe\".",
+          "The buyer wants to pay or settle outside PayPal, which removes your seller protection.",
+          "The buyer asked to change the address after paying. PayPal only protects you if you ship to the address on the order."
+        ],
+        "whatToDo": "Do not ship this order. Cancel the order and issue a full refund to the buyer.",
+        "flags": [
+          "forwarder",
+          "different_name",
+          "outside_paypal",
+          "address_change",
+          "friend_pickup",
+          "urgency"
+        ],
+        "checkedAt": "2026-11-10T16:51:50.364Z"
+      },
+      "scamNotes": "Hi! Please hurry, I need it today. My friend will pick it up from you. Also can you ship to my new address instead? I can pay you the shipping by Zelle."
+    },
+    {
+      "orderId": "9WM57437VR0230401",
+      "captureId": "13T84673BP753982G",
+      "amount": "45.00",
+      "item": "Handmade leather wallet",
+      "buyerEmail": "sb-xrufm53811894@personal.example.com",
+      "createdAt": "2026-11-09T16:48:51.595Z",
+      "tracking": {
+        "carrier": "FedEx",
+        "number": "794612345678",
+        "addedAt": "2026-11-09T16:49:47.375Z"
+      },
+      "refunded": {
+        "amount": "5.00",
+        "at": "2026-11-09T16:52:47.288Z"
+      },
+      "breakdown": {
+        "gross": "45.00",
+        "fee": "2.06",
+        "net": "42.94",
+        "currency": "USD"
+      },
+      "shipTo": {
+        "line1": "2211 N First St",
+        "city": "San Jose",
+        "state": "CA",
+        "postalCode": "95131",
+        "countryCode": "US",
+        "name": "John Doe"
+      },
+      "payer": {
+        "name": "John Doe",
+        "email": "sb-xrufm53811894@personal.example.com",
+        "countryCode": "US",
+        "address": {
+          "countryCode": "US"
+        }
+      },
+      "scam": {
+        "verdict": "safe",
+        "headline": "Safe to ship",
+        "reasons": [
+          "The buyer's name and shipping address match the PayPal account details.",
+          "There are no unusual messages or requests from the buyer.",
+          "The shipping address is a standard US address, not a known freight forwarder."
+        ],
+        "whatToDo": "Ship to the address on the PayPal order and add tracking.",
+        "flags": [],
+        "checkedAt": "2026-11-10T16:44:32.932Z"
+      }
+    },
+    {
+      "orderId": "94P71757C13367443",
+      "captureId": "7JF07338TJ6272834",
+      "amount": "28.00",
+      "item": "Ceramic coffee mug set",
+      "buyerEmail": "sb-xrufm53811894@personal.example.com",
+      "createdAt": "2026-11-09T13:22:48.491Z",
+      "tracking": {
+        "carrier": "USPS",
+        "number": "9400111899223197428490",
+        "addedAt": "2026-11-09T13:29:51.524Z"
+      },
+      "buyerMessage": "One of the mugs arrived chipped, really disappointed.",
+      "risk": {
+        "level": "medium",
+        "reason": "The buyer is disappointed about a damaged item but hasn't escalated yet, indicating they are open to a resolution."
+      },
+      "shipTo": {
+        "line1": "2211 N First St",
+        "city": "San Jose",
+        "state": "CA",
+        "postalCode": "95131",
+        "countryCode": "US",
+        "name": "John Doe"
+      },
+      "payer": {
+        "name": "John Doe",
+        "email": "sb-xrufm53811894@personal.example.com",
+        "countryCode": "US",
+        "address": {
+          "countryCode": "US"
+        }
+      }
+    },
+    {
+      "orderId": "0TX21497DT186545L",
+      "captureId": "1S7963370J283145F",
+      "amount": "45.00",
+      "item": "Handmade leather wallet",
+      "buyerEmail": "sb-xrufm53811894@personal.example.com",
+      "createdAt": "2026-11-09T13:19:42.035Z",
+      "tracking": {
+        "carrier": "UPS",
+        "number": "1Z999AA10123456784",
+        "addedAt": "2026-11-09T13:20:11.995Z"
+      },
+      "buyerMessage": "The wallet arrived but the stitching is coming loose on one side. Pretty disappointed for $45. What can you do?",
+      "risk": {
+        "level": "medium",
+        "reason": "The buyer reported a defect with the item and is asking for a solution, indicating disappointment."
+      },
+      "refunded": {
+        "amount": "15.00",
+        "at": "2026-11-09T13:21:02.621Z"
+      },
+      "breakdown": {
+        "gross": "45.00",
+        "fee": "2.06",
+        "net": "42.94",
+        "currency": "USD"
+      },
+      "shipTo": {
+        "line1": "2211 N First St",
+        "city": "San Jose",
+        "state": "CA",
+        "postalCode": "95131",
+        "countryCode": "US",
+        "name": "John Doe"
+      },
+      "payer": {
+        "name": "John Doe",
+        "email": "sb-xrufm53811894@personal.example.com",
+        "countryCode": "US",
+        "address": {
+          "countryCode": "US"
+        }
+      }
+    }
+  ],
+  "events": []
+}
